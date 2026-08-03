@@ -1,0 +1,4 @@
+.vscode
+*.ps1
+/release/
+*.zip
