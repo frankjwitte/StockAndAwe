@@ -2,7 +2,7 @@
 ## Title: Stock And Awe
 ## Notes: Buys your buff reagents so forgetting them can remain somebody else's problem.
 ## Author: Macey
-## Version: 0.2.1
+## Version: 0.2.2
 ## SavedVariables: StockAndAweDB
 ## OptionalDeps: Titan
 StockAndAwe.lua

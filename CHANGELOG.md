@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Triggered the newly configured CurseForge packaging webhook. The machinery has been formally introduced to the button.
+
 ## 0.2.1
 
 - Reissued the 0.2.0 compatibility release so the automated packager can do its job. Apparently tags require supervision too.
