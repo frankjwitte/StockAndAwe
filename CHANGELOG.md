@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Reissued the 0.2.0 compatibility release so the automated packager can do its job. Apparently tags require supervision too.
+
 ## 0.2.0
 
 - Added support for interface versions 120005, 50504, 38000, 20506, and 11508. Stocking up is now a cross-era obligation.
