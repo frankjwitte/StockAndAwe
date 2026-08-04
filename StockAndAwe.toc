@@ -1,8 +1,8 @@
-## Interface: 11509, 20506
+## Interface: 120005, 50504, 38000, 20506, 11508
 ## Title: Stock And Awe
 ## Notes: Buys your buff reagents so forgetting them can remain somebody else's problem.
 ## Author: Macey
-## Version: 0.1.0
+## Version: 0.2.0
 ## SavedVariables: StockAndAweDB
 ## OptionalDeps: Titan
 StockAndAwe.lua

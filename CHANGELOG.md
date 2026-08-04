@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Added support for interface versions 120005, 50504, 38000, 20506, and 11508. Stocking up is now a cross-era obligation.
+
 ## 0.1.0
 
 - Added automatic vendor restocking for class reagents, because running out mid-buff is beneath you.

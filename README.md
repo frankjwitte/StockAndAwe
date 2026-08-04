@@ -62,7 +62,7 @@ World of Warcraft\_anniversary_\Interface\AddOns\StockAndAwe
 
 Enable it from the character select addon list, then reload WoW or type `/reload`.
 
-The `.toc` includes interface `11509` for current Classic Era and `20506` for current Burning Crusade Classic Anniversary. If your client marks the addon out of date after a patch, update the `## Interface` value in `StockAndAwe.toc` or enable out-of-date addons.
+The `.toc` supports interface versions `120005`, `50504`, `38000`, `20506`, and `11508`. If your client marks the addon out of date after a patch, update the `## Interface` value in `StockAndAwe.toc` or enable out-of-date addons.
 
 ## Contributing
 
