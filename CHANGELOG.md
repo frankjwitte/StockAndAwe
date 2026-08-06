@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Fixed Titan Panel registering Stock And Awe twice after `/reload`. One button is sufficient for a button.
+- Aligned the Titan plugin metadata version with the addon release.
+
 ## 0.2.2
 
 - Triggered the newly configured CurseForge packaging webhook. The machinery has been formally introduced to the button.
