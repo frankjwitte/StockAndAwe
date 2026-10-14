@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4
+
+- Updated interface versions to 120105, 50504, 38000, 20506, and 11509. The addon remains current, which is more than can be said for your reagent supply.
+
 ## 0.2.3
 
 - Fixed Titan Panel registering Stock And Awe twice after `/reload`. One button is sufficient for a button.
