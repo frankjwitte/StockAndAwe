@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+- Added interface version 16001 for WoW Forever. Your reagents can now run out forever, too.
+
 ## 0.2.4
 
 - Updated interface versions to 120105, 50504, 38000, 20506, and 11509. The addon remains current, which is more than can be said for your reagent supply.
