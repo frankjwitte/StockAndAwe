@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6
+
+- Merchant lookups now use `C_MerchantFrame.GetItemInfo` when the client provides it, falling back to the legacy API elsewhere. Modern vendors can now be pestered properly.
+
 ## 0.2.5
 
 - Added interface version 16001 for WoW Forever. Your reagents can now run out forever, too.

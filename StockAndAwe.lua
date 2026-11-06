@@ -170,15 +170,38 @@ local function GetClassRules()
     return StockAndAweDB.rules[playerClass]
 end
 
-local function GetMerchantExtendedCost(slot)
-    local returnCount = select("#", GetMerchantItemInfo(slot))
-    local _, _, _, _, _, _, classicExtendedCost, modernExtendedCost = GetMerchantItemInfo(slot)
-
-    if returnCount >= 8 then
-        return modernExtendedCost
+-- Returns a normalized table: { name, stackCount, numAvailable, hasExtendedCost }
+-- Uses C_MerchantFrame.GetItemInfo (11.0+) when available, else the legacy global.
+local function GetMerchantSlotInfo(slot)
+    if C_MerchantFrame and C_MerchantFrame.GetItemInfo then
+        local info = C_MerchantFrame.GetItemInfo(slot)
+        if not info then
+            return nil
+        end
+        return {
+            name = info.name,
+            stackCount = info.stackCount,
+            numAvailable = info.numAvailable,
+            hasExtendedCost = info.hasExtendedCost,
+        }
     end
 
-    return classicExtendedCost
+    if GetMerchantItemInfo then
+        local returnCount = select("#", GetMerchantItemInfo(slot))
+        local name, _, _, stackCount, numAvailable, _, classicExtendedCost, modernExtendedCost = GetMerchantItemInfo(slot)
+        local extendedCost = classicExtendedCost
+        if returnCount >= 8 then
+            extendedCost = modernExtendedCost
+        end
+        return {
+            name = name,
+            stackCount = stackCount,
+            numAvailable = numAvailable,
+            hasExtendedCost = extendedCost,
+        }
+    end
+
+    return nil
 end
 
 local function GetMerchantItemId(slot)
@@ -201,15 +224,15 @@ local function BuildMerchantIndex()
     local items = {}
 
     for slot = 1, GetMerchantNumItems() do
-        local name, _, _, merchantQuantity, numAvailable = GetMerchantItemInfo(slot)
+        local info = GetMerchantSlotInfo(slot)
         local itemID = GetMerchantItemId(slot)
 
-        if itemID and name then
+        if itemID and info and info.name then
             items[itemID] = {
                 slot = slot,
-                quantity = merchantQuantity or 1,
-                available = numAvailable,
-                extendedCost = GetMerchantExtendedCost(slot),
+                quantity = info.stackCount or 1,
+                available = info.numAvailable,
+                extendedCost = info.hasExtendedCost,
             }
         end
     end

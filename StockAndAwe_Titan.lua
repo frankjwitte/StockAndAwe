@@ -104,7 +104,7 @@ function StockAndAweTitan_Initialize()
 
     local button = CreateFrame("Button", TITAN_BUTTON, UIParent, "TitanPanelComboTemplate")
     button.registry = {
-        version = "0.2.5",
+        version = "0.2.6",
         id = TITAN_ID,
         menuText = "Stock And Awe",
         buttonTextFunction = "TitanPanelStockAndAwe_GetButtonText",
