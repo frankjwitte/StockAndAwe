@@ -1,5 +1,12 @@
 local addonName = ...
 
+-- Newer clients moved the item API into C_Item; older ones only have the globals.
+local C_Item = C_Item or {}
+local GetItemInfo = C_Item.GetItemInfo or GetItemInfo
+local GetItemCount = C_Item.GetItemCount or GetItemCount
+local GetItemInfoInstant = C_Item.GetItemInfoInstant or GetItemInfoInstant
+local GetItemFamily = C_Item.GetItemFamily or GetItemFamily
+
 local frame = CreateFrame("Frame")
 local playerClass
 local DEFAULT_RULES_VERSION = 3
@@ -16,6 +23,7 @@ local DEFAULTS = {
     enabled = true,
     announce = true,
     dryRun = false,
+    ammo = true,
     rules = {
         DRUID = {
             { itemID = 17026, stacks = 1, fallbackStack = 20 }, -- Wild Thornroot
@@ -95,6 +103,10 @@ local function ApplyDefaults()
         StockAndAweDB.dryRun = DEFAULTS.dryRun
     end
 
+    if StockAndAweDB.ammo == nil then
+        StockAndAweDB.ammo = DEFAULTS.ammo
+    end
+
     if type(StockAndAweDB.rules) ~= "table" then
         StockAndAweDB.rules = {}
     end
@@ -159,7 +171,156 @@ local function GetStackSize(rule)
 end
 
 local function GetRuleTarget(rule)
+    if rule.target then
+        return rule.target
+    end
+
     return (rule.stacks or 1) * GetStackSize(rule)
+end
+
+-- Ammo pouches and quivers. Bag family bits: 1 = Quiver, 2 = Ammo Pouch.
+local AMMO_BAG_FAMILY_MASK = 3
+local AMMO_FALLBACK_STACK = 200
+
+local function GetBagNumSlots(bag)
+    if C_Container and C_Container.GetContainerNumSlots then
+        return C_Container.GetContainerNumSlots(bag) or 0
+    end
+
+    return GetContainerNumSlots and GetContainerNumSlots(bag) or 0
+end
+
+local function GetBagFamily(bag)
+    local _, family
+    if C_Container and C_Container.GetContainerNumFreeSlots then
+        _, family = C_Container.GetContainerNumFreeSlots(bag)
+    elseif GetContainerNumFreeSlots then
+        _, family = GetContainerNumFreeSlots(bag)
+    end
+
+    return family or 0
+end
+
+local function GetBagItemID(bag)
+    local inventoryID
+    if C_Container and C_Container.ContainerIDToInventoryID then
+        inventoryID = C_Container.ContainerIDToInventoryID(bag)
+    elseif ContainerIDToInventoryID then
+        inventoryID = ContainerIDToInventoryID(bag)
+    end
+
+    return inventoryID and GetInventoryItemID("player", inventoryID)
+end
+
+local QUIVER_ITEM_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Quiver) or 11
+
+local function IsAmmoBag(bag)
+    if bit.band(GetBagFamily(bag), AMMO_BAG_FAMILY_MASK) ~= 0 then
+        return true
+    end
+
+    local bagItemID = GetBagItemID(bag)
+    if not bagItemID then
+        return false
+    end
+
+    if GetItemFamily and bit.band(GetItemFamily(bagItemID) or 0, AMMO_BAG_FAMILY_MASK) ~= 0 then
+        return true
+    end
+
+    local classID = GetItemInfoInstant and select(6, GetItemInfoInstant(bagItemID))
+    return classID == QUIVER_ITEM_CLASS
+end
+
+local function GetBagSlotItem(bag, slot)
+    if C_Container and C_Container.GetContainerItemInfo then
+        local info = C_Container.GetContainerItemInfo(bag, slot)
+        if info then
+            return info.itemID, info.stackCount or 0
+        end
+        return nil, 0
+    end
+
+    if GetContainerItemInfo then
+        local _, count, _, _, _, _, link, _, _, itemID = GetContainerItemInfo(bag, slot)
+        itemID = itemID or (link and tonumber(string.match(link, "item:(%d+)")))
+        return itemID, count or 0
+    end
+
+    return nil, 0
+end
+
+local function IsAmmo(itemID)
+    if not itemID or not GetItemInfoInstant then
+        return false
+    end
+
+    local _, _, _, equipLoc = GetItemInfoInstant(itemID)
+    return equipLoc == "INVTYPE_AMMO"
+end
+
+local function GetEquippedAmmo()
+    local ammoSlot = INVSLOT_AMMO or 0
+    local itemID = GetInventoryItemID and GetInventoryItemID("player", ammoSlot)
+    if IsAmmo(itemID) then
+        return itemID
+    end
+
+    return nil
+end
+
+-- Returns a synthetic rule that fills the hunter's quiver or ammo pouch with
+-- the ammo that is already in it, or nil when there is nothing to fill.
+local function GetAmmoRule()
+    if playerClass ~= "HUNTER" or not StockAndAweDB.ammo then
+        return nil
+    end
+
+    local pouchSlots = {}
+    local ammoCounts = {}
+
+    for bag = 1, NUM_BAG_SLOTS or 4 do
+        if IsAmmoBag(bag) then
+            for slot = 1, GetBagNumSlots(bag) do
+                local itemID, count = GetBagSlotItem(bag, slot)
+                table.insert(pouchSlots, { itemID = itemID, count = count })
+                if IsAmmo(itemID) then
+                    ammoCounts[itemID] = (ammoCounts[itemID] or 0) + count
+                end
+            end
+        end
+    end
+
+    if #pouchSlots == 0 then
+        return nil
+    end
+
+    local ammoID, bestCount = nil, 0
+    for itemID, count in pairs(ammoCounts) do
+        if count > bestCount then
+            ammoID, bestCount = itemID, count
+        end
+    end
+
+    ammoID = ammoID or GetEquippedAmmo()
+    if not ammoID then
+        return nil
+    end
+
+    local rule = { itemID = ammoID, fallbackStack = AMMO_FALLBACK_STACK, isAmmo = true }
+    local stackSize = GetStackSize(rule)
+    local free = 0
+
+    for _, pouchSlot in ipairs(pouchSlots) do
+        if not pouchSlot.itemID then
+            free = free + stackSize
+        elseif pouchSlot.itemID == ammoID then
+            free = free + math.max(0, stackSize - pouchSlot.count)
+        end
+    end
+
+    rule.target = (GetItemCount(ammoID, false, false) or 0) + free
+    return rule
 end
 
 local function GetClassRules()
@@ -266,6 +427,12 @@ local function BuildPurchase(rule, merchantItems)
     local amount = missing
     if merchantItem.available and merchantItem.available > -1 then
         amount = math.min(amount, merchantItem.available * merchantQuantity)
+    end
+
+    -- Vendors sell ammo in fixed batches (e.g. 200 arrows); a quiver has a hard
+    -- capacity, so only buy whole batches that fit.
+    if rule.isAmmo and merchantQuantity > 1 then
+        amount = math.floor(amount / merchantQuantity) * merchantQuantity
     end
 
     if amount <= 0 then
@@ -393,10 +560,8 @@ local function Restock()
         return
     end
 
-    local rules = GetClassRules()
-    if not rules then
-        return
-    end
+    local rules = GetClassRules() or {}
+    local ammoRule = GetAmmoRule()
 
     local merchantItems = BuildMerchantIndex()
     local purchases = {}
@@ -405,6 +570,13 @@ local function Restock()
         local result = BuildPurchase(rule, merchantItems)
         if result then
             table.insert(purchases, { result = result, rule = rule })
+        end
+    end
+
+    if ammoRule then
+        local result = BuildPurchase(ammoRule, merchantItems)
+        if result then
+            table.insert(purchases, { result = result, rule = ammoRule })
         end
     end
 
@@ -447,8 +619,22 @@ end
 local function ShowStatus()
     Print("enabled=" .. tostring(StockAndAweDB.enabled) .. ", dryRun=" .. tostring(StockAndAweDB.dryRun) .. ", announce=" .. tostring(StockAndAweDB.announce))
 
+    if playerClass == "HUNTER" then
+        local ammoRule = GetAmmoRule()
+        if not StockAndAweDB.ammo then
+            Print("Ammo refill: disabled.")
+        elseif ammoRule then
+            Print(string.format("Ammo refill: %s, target %d, bags %d", GetItemName(ammoRule.itemID), ammoRule.target, GetItemCount(ammoRule.itemID, false, false) or 0))
+        else
+            Print("Ammo refill: enabled, but no ammo found in a quiver or ammo pouch.")
+        end
+    end
+
     local rules = GetClassRules()
     if not rules or #rules == 0 then
+        if playerClass == "HUNTER" then
+            return
+        end
         Print("No stock rules for your class yet. Use /saa item <itemID> <stacks>.")
         return
     end
@@ -530,6 +716,7 @@ local function ShowHelp()
     Print("/saa buy - restock from the open vendor now")
     Print("/saa dryrun - toggle preview mode without buying")
     Print("/saa quiet|chat - toggle purchase messages")
+    Print("/saa ammo - toggle hunter quiver/ammo pouch refills")
     Print("/saa item <itemID> <stacks> - add or update a vendor reagent rule for your class")
     Print("/saa reagent <itemID> - toggle a reagent rule for your class")
     Print("/saa options - change stack targets for your class")
@@ -573,6 +760,25 @@ local function HandleSlashCommand(input)
     elseif command == "chat" then
         StockAndAweDB.announce = true
         Print("Purchase messages shown.")
+    elseif command == "ammo" then
+        StockAndAweDB.ammo = not StockAndAweDB.ammo
+        Print("Ammo refill " .. (StockAndAweDB.ammo and "enabled." or "disabled."))
+    elseif command == "ammodebug" then
+        for bag = 0, NUM_BAG_SLOTS or 4 do
+            local bagItemID = bag > 0 and GetBagItemID(bag) or nil
+            local itemFamily = bagItemID and GetItemFamily and GetItemFamily(bagItemID)
+            local classID = bagItemID and GetItemInfoInstant and select(6, GetItemInfoInstant(bagItemID))
+            local ammoSlots = 0
+            for slot = 1, GetBagNumSlots(bag) do
+                if IsAmmo((GetBagSlotItem(bag, slot))) then
+                    ammoSlots = ammoSlots + 1
+                end
+            end
+            Print(string.format("bag %d: item=%s slots=%d freeFamily=%s itemFamily=%s classID=%s ammoBag=%s ammoStacks=%d",
+                bag, tostring(bagItemID), GetBagNumSlots(bag), tostring(GetBagFamily(bag)), tostring(itemFamily),
+                tostring(classID), tostring(bag > 0 and IsAmmoBag(bag)), ammoSlots))
+        end
+        Print("equipped ammo: " .. tostring(GetEquippedAmmo()))
     elseif command == "item" then
         local itemID, stacks = string.match(rest, "^(%d+)%s+(%d+)$")
         itemID = tonumber(itemID)

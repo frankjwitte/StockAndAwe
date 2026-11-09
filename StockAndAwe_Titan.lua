@@ -1,3 +1,4 @@
+local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 local TITAN_ID = "StockAndAwe"
 local TITAN_BUTTON = "TitanPanelStockAndAweButton"
 
@@ -104,7 +105,7 @@ function StockAndAweTitan_Initialize()
 
     local button = CreateFrame("Button", TITAN_BUTTON, UIParent, "TitanPanelComboTemplate")
     button.registry = {
-        version = "0.2.6",
+        version = "0.2.7",
         id = TITAN_ID,
         menuText = "Stock And Awe",
         buttonTextFunction = "TitanPanelStockAndAwe_GetButtonText",

@@ -1,3 +1,4 @@
+local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 local panel
 local rows = {}
 

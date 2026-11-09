@@ -23,6 +23,7 @@ Stock And Awe is a small World of Warcraft Classic Era / Anniversary addon that 
 - Rogue: one stack of Flash Powder.
 - Shaman: one stack of Ankh. Fish scales and oil come from creatures, not vendors, and therefore are not our problem.
 - Warlock: one stack each of Demonic Figurine and Infernal Stone.
+- Hunter: tops up your quiver or ammo pouch with whatever ammo is already in it (or your equipped ammo if it is empty). Toggle with `/saa ammo`.
 
 ## Commands
 
@@ -34,6 +35,7 @@ Stock And Awe is a small World of Warcraft Classic Era / Anniversary addon that 
 /saa dryrun
 /saa quiet
 /saa chat
+/saa ammo
 /saa item <itemID> <stacks>
 /saa reagent <itemID>
 /saa options

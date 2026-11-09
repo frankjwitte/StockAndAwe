@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.7
+
+- Hunters now get their quiver or ammo pouch topped up with whatever ammo is already in it (or the equipped ammo if it is empty). Only whole vendor batches that fit are bought, so the quiver gets fed, not force-fed. Toggle with `/saa ammo`.
+- Item lookups now use the `C_Item` API when the client provides it, falling back to the old globals elsewhere. Newer Classic clients stopped answering to the old names.
+
 ## 0.2.6
 
 - Merchant lookups now use `C_MerchantFrame.GetItemInfo` when the client provides it, falling back to the legacy API elsewhere. Modern vendors can now be pestered properly.
