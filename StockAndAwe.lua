@@ -295,14 +295,17 @@ local function GetAmmoRule()
         return nil
     end
 
-    local ammoID, bestCount = nil, 0
-    for itemID, count in pairs(ammoCounts) do
-        if count > bestCount then
-            ammoID, bestCount = itemID, count
+    -- Prefer the equipped ammo; otherwise whatever the pouch holds most of.
+    local ammoID = GetEquippedAmmo()
+    if not ammoID then
+        local bestCount = 0
+        for itemID, count in pairs(ammoCounts) do
+            if count > bestCount then
+                ammoID, bestCount = itemID, count
+            end
         end
     end
 
-    ammoID = ammoID or GetEquippedAmmo()
     if not ammoID then
         return nil
     end
@@ -550,6 +553,47 @@ local function QueuePurchase(result, rule)
     restockItemIDs[result.itemID] = true
 end
 
+local function MerchantSellsAmmo(merchantItems)
+    for itemID in pairs(merchantItems) do
+        if IsAmmo(itemID) then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Explains why no ammo was bought, but only at vendors that sell ammo so
+-- every other vendor visit stays quiet.
+local function AnnounceAmmoSkip(ammoRule, merchantItems)
+    if playerClass ~= "HUNTER" or not StockAndAweDB.ammo or not MerchantSellsAmmo(merchantItems) then
+        return
+    end
+
+    if not ammoRule then
+        Announce("Ammo: no ammo found in your quiver or ammo pouch, and none equipped.")
+        return
+    end
+
+    local name = GetItemName(ammoRule.itemID)
+    local merchantItem = merchantItems[ammoRule.itemID]
+    if not merchantItem then
+        Announce("Ammo: this vendor does not sell " .. name .. ".")
+        return
+    end
+
+    if merchantItem.extendedCost then
+        Announce("Ammo: this vendor wants more than gold for " .. name .. ".")
+        return
+    end
+
+    local owned = GetItemCount(ammoRule.itemID, false, false) or 0
+    local free = ammoRule.target - owned
+    if free > 0 then
+        Announce(string.format("Ammo: only %d free for %s; this vendor sells it in batches of %d.", free, name, merchantItem.quantity or 1))
+    end
+end
+
 local function Restock()
     if not StockAndAweDB.enabled then
         return
@@ -577,7 +621,11 @@ local function Restock()
         local result = BuildPurchase(ammoRule, merchantItems)
         if result then
             table.insert(purchases, { result = result, rule = ammoRule })
+        else
+            AnnounceAmmoSkip(ammoRule, merchantItems)
         end
+    else
+        AnnounceAmmoSkip(nil, merchantItems)
     end
 
     for _, purchase in ipairs(purchases) do

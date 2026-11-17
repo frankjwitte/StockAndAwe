@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Ammo refills now prefer your equipped ammo, falling back to whatever the quiver or pouch holds most of. Upgrading to Heavy Shot no longer requires outnumbering your Light Shot first.
+- At vendors that sell ammo, Stock And Awe now explains when it skips a refill: wrong ammo for sale, not enough room for a full batch, or nothing to refill. Silence was never a great diagnostic tool.
+
 ## 0.2.7
 
 - Hunters now get their quiver or ammo pouch topped up with whatever ammo is already in it (or the equipped ammo if it is empty). Only whole vendor batches that fit are bought, so the quiver gets fed, not force-fed. Toggle with `/saa ammo`.
